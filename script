@@ -1,0 +1,14 @@
+#!/bin/bash
+
+
+date > ~/date.log
+
+source build/envsetup.sh
+
+breakfast shieldtablet
+
+croot
+
+brunch shieldtablet
+
+date >> ~/date.log
