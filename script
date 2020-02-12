@@ -3,6 +3,8 @@
 
 date > ~/date.log
 
+_placeHere=$(pwd)
+
 source build/envsetup.sh
 
 target="shieldtablet"
@@ -13,8 +15,8 @@ source vendor/lineage/vendorsetup.sh
 
 lunch lineage_${target}-userdebug
 
-croot
+cd ${_placeHere}
 
-brunch shieldtablet
+${_placeHere}/build/soong/soong_ui.bash --make-mode -j bacon
 
 date >> ~/date.log
