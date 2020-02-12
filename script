@@ -5,7 +5,13 @@ date > ~/date.log
 
 source build/envsetup.sh
 
-breakfast shieldtablet
+target="shieldtablet"
+LINEAGE_DEVICES_ONLY="true"
+LUNCH_MENU_CHOICES=(full-eng)
+
+source vendor/lineage/vendorsetup.sh
+
+lunch lineage_${target}-userdebug
 
 croot
 
