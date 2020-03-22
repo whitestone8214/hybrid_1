@@ -3,20 +3,71 @@
 
 date > ~/date.log
 
-_placeHere=$(pwd)
+_pathHere=$(pwd)
+#_pathSourceToolchain="https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_x86_x86_64-linux-android-4.9"
+_pathSourceToolchain="https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9"
+#_pathSourceToolchain="https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9"
+#_pathSourceLinux="https://github.com/torvalds/linux"
+_pathSourceLinux="https://github.com/Triodex/TrioX-V04-Kernel"
+_nameLinuxPreset="lineage_shieldtablet_defconfig"
+#_textArchTarget="x86_64"
+_textArchTarget="arm"
+#_textArchTarget="aarch64"
+#_textPrefixToolchain="${_pathHere}/toolchain/bin/x86_64-linux-android-"
+_textPrefixToolchain="${_pathHere}/toolchain/bin/arm-linux-androidkernel-"
+#_textPrefixToolchain="${_pathHere}/toolchain/bin/aarch64-linux-android-"
 
-source build/envsetup.sh
-
-target="shieldtablet"
-LINEAGE_DEVICES_ONLY="true"
-LUNCH_MENU_CHOICES=(full-eng)
-
-source vendor/lineage/vendorsetup.sh
-
-lunch lineage_${target}-userdebug
-
-cd ${_placeHere}
-
-${_placeHere}/build/soong/soong_ui.bash --make-mode -j bacon
+if (test "$1" = "linux"); then
+	cd ${_pathHere} || exit 1
+	rm -rf outlet/{linux,modules}
+	mkdir -p outlet/linux || exit 1
+	
+	if (test "$2" = "firsttime"); then
+		echo ":: Remove Linux source and toolchain"
+		rm -rf linux toolchain || exit 1
+		
+		echo ":: Get Linux source and toolchain"
+		git clone --depth 1 ${_pathSourceLinux} linux || exit 1
+		git clone --depth 1 ${_pathSourceToolchain} toolchain || exit 1
+	fi
+	cd linux || exit 1
+	
+	echo ":: Settings before build"
+	/bin/make -j2 CFLAGS_MODULE=-fno-pic V=1 -C ${_pathHere}/linux O=${_pathHere}/outlet/linux ARCH=${_textArchTarget} CROSS_COMPILE=${_textPrefixToolchain} VARIANT_DEFCONFIG= SELINUX_DEFCONFIG= ${_nameLinuxPreset} || exit 1
+	/bin/make -j2 CFLAGS_MODULE=-fno-pic V=1 -C ${_pathHere}/linux O=${_pathHere}/outlet/linux ARCH=${_textArchTarget} CROSS_COMPILE=${_textPrefixToolchain} VARIANT_DEFCONFIG= SELINUX_DEFCONFIG= savedefconfig || exit 1
+	
+	echo ":: Linux itself"
+	/bin/make -j2 CFLAGS_MODULE=-fno-pic V=1 -C ${_pathHere}/linux O=${_pathHere}/outlet/linux ARCH=${_textArchTarget} CROSS_COMPILE=${_textPrefixToolchain} VARIANT_DEFCONFIG= SELINUX_DEFCONFIG= zImage || exit 1
+	
+	echo ":: Devicetree binaries"
+	/bin/make -j2 CFLAGS_MODULE=-fno-pic V=1 -C ${_pathHere}/linux O=${_pathHere}/outlet/linux ARCH=${_textArchTarget} CROSS_COMPILE=${_textPrefixToolchain} VARIANT_DEFCONFIG= SELINUX_DEFCONFIG= dtbs || exit 1
+	
+	echo ":: Additional modules"
+	/bin/make -j2 CFLAGS_MODULE=-fno-pic V=1 -C ${_pathHere}/linux O=${_pathHere}/outlet/linux ARCH=${_textArchTarget} CROSS_COMPILE=${_textPrefixToolchain} VARIANT_DEFCONFIG= SELINUX_DEFCONFIG= modules || exit 1
+	/bin/make -j2 CFLAGS_MODULE=-fno-pic V=1 -C ${_pathHere}/linux O=${_pathHere}/outlet/linux ARCH=${_textArchTarget} CROSS_COMPILE=${_textPrefixToolchain} VARIANT_DEFCONFIG= SELINUX_DEFCONFIG= INSTALL_MOD_PATH=${_pathHere}/outlet/modules modules_install || exit 1
+	
+	cd ${_pathHere} || exit 1
+elif (test "$1" = "entire"); then
+	source build/envsetup.sh
+	
+	target="shieldtablet"
+	LINEAGE_DEVICES_ONLY="true"
+	LUNCH_MENU_CHOICES=(full-eng)
+	
+	source vendor/lineage/vendorsetup.sh
+	
+	lunch lineage_${target}-userdebug
+	
+	cd ${_pathHere}
+	
+	${_pathHere}/build/soong/soong_ui.bash --make-mode -j bacon
+else
+	echo
+	echo "- usage: ./script [order]"
+	echo "- order:"
+	echo "	- linux: Build Linux (kernel, DTBs, modules)"
+	echo "	- entire: Build entire system"
+	echo
+fi
 
 date >> ~/date.log
